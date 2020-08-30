@@ -1,0 +1,27 @@
+## R-related files
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+## Backup files
+*.bak
+*.sav
+
+## ViM
+*.swp
+
+## LaTeX
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.synctex.gz
+
+## Output
+*.pdf
+*.rds
+*.RData
+
