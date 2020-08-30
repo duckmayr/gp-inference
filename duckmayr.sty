@@ -1,0 +1,40 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{duckmayr}[2020/06/26 Custom LaTeX settings and macros]
+
+%% Math support
+\RequirePackage{amsmath}
+\RequirePackage{amssymb} %% Loads amsfonts
+\RequirePackage{amsthm}
+
+%% Math macros
+\newcommand{\mbf}[1]{\ensuremath{\mathbf{#1}}}  %% Math boldface shortcut
+\newcommand{\bs}{\ensuremath{\boldsymbol}}      %% Math boldsymbol shortcut
+\newcommand{\N}{\ensuremath{\mathcal{N}}}       %% normal
+\newcommand{\GP}{\ensuremath{\mathcal{GP}}}     %% Gaussian process
+\newcommand{\IG}{\ensuremath{\mathcal{IG}}}     %% inverse gamma
+\newcommand{\R}{\ensuremath{\mathbb{R}}}        %% reals
+
+%% Math operators
+\DeclareMathOperator{\E}{\mathbb{E}}            %% expectation
+\DeclareMathOperator{\V}{\mathbb{V}}            %% variance
+\DeclareMathOperator{\C}{\mathbb{C}}            %% covariance
+
+%% Theorem environments
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\theoremstyle{remark}
+\newtheorem{remark}{Remark}
+
+%% Tables
+\RequirePackage{booktabs}
+\RequirePackage{dcolumn}
+\newcolumntype{d}{D{.}{.}{2}}
+\newcommand{\mc}[3]{\multicolumn{#1}{#2}{#3}}
+\newcommand{\cc}[1]{\multicolumn{1}{c}{#1}}
+
+%% Figures
+\RequirePackage{graphicx}
+\RequirePackage{subcaption}
+

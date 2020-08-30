@@ -1,0 +1,641 @@
+\documentclass{draft}
+
+\usepackage{duckmayr}
+
+\usepackage{natbib}
+\usepackage{url}
+
+\newcommand{\pd}{\ensuremath{\partial \,}}     %% improve spacing on partials
+\newcommand{\gradient}{\ensuremath{\mathbf{f}_d}} %% { (\pd f_i) / (\pd x_{id} }
+
+\title{Inference in Gaussian Process Models for Political Science}
+\author{JBrandon Duck-Mayr}
+\date{}
+
+\abstract{
+    Political scientists often seek to perform inference in settings where
+    knowledge about the functional form mapping predictors to outcomes is imperfect
+    or the traditional assumption of conditional independence of observations does not hold.
+    Recently Gaussian process (GP) models, a family of machine learning techniques,
+    have been used to study politics in such settings;
+    however, many inferential quantities of interest to political science have either
+    not been derived in the statistical and machine learning literature the models hail from
+    or have not been employed in the political science literature yet.
+    I provide practical guidance for applied researchers to implement GP models for more accurate inference in their research,
+    including how to obtain quantities of interest to political scientists,
+    the derivations of which are novel to the GP model literature.
+}
+
+\bibpunct{(}{)}{;}{a}{}{,}
+\bibdata{refs.bib}
+
+\begin{document}
+
+\maketitlepage
+
+Gaussian process (GP) models, a class of machine learning techniques, are increasingly being employed to study politics,
+from measuring ideology \citep{Gill2020Measuring, Duck-MayrEtAl2020GPIRT}%
+\footnote{
+    \citet{Gill2020Measuring} uses ``spatial kriging,'' which is a type of GP model,
+    to extrapolate ideology measures spatially across the U.S.,
+    while \citet{Duck-MayrEtAl2020GPIRT} develop a novel GP item response theoretic model (GPIRT).
+}
+to dealing with violations of conditional independence in time-series cross-sectional data \citep{Carlson2020Modeling}.
+GP models are powerful tools to model the relationship between predictors and outcomes when
+the functional form mapping predictors to response is imperfectly known or observations may not be conditionally independent,
+common settings in political science.
+However, inference in the machine learning setting often focuses (sometimes exclusively) on prediction,
+while other inferential quantities are often of interest to political scientists.
+I show how these models can be used to obtain quantities of interest to political scientists,
+including a novel derivation of average marginal effects for GP models.%
+\footnote{
+    The full derivations can be found in the appendix;
+    in the main body of the paper I present results and practical guidance.
+}
+I first provide a primer on GP models, explaining their particular import for political science specifically.
+I highlight their nascent use in political science,
+briefly explaining existing approaches to inference with GP models in the political science literature.
+I then outline how to obtain a number of other quantities of interest and provide practical guidance in the use of these models
+to enable the discipline to better harness these powerful tools for social scientific inference.
+
+
+\section{A Primer on GP Models}
+\label{sec:gp-primer}
+
+Generally we want to reason about the relationship between predictors \( X \) and outcomes \( y \).
+So, we generally say
+
+\vspace*{-\baselineskip}
+\begin{align}
+    y_i & = f \left( \mathbf{x}_i \right) + \varepsilon_i,
+\end{align}
+
+\noindent
+where \( y_i \) is our observed outcome for observation \( i \),
+\( \mathbf{x}_i \) is our observed vector of predictors for observation \( i \),
+and \( \varepsilon_i \) is the error term---some added random noise.
+Then, we want to learn about \( f \left( X \right) \).
+A stereotypical approach in political science is to assume a functional form for \( f \),
+and that the noise elements \( \varepsilon_i \) are independently distributed.
+In that case our task is to perform inference on the parameters of \( f \).
+A number of non-parametric approaches are available when the form of \( f \) is unknown,
+and a variety of statistical fixes have been developed for various correlation structures of \( \boldsymbol\varepsilon \).
+
+A non-parametric approach common in the machine learning literature and now starting to gain traction in political science
+is to model \( f \) as a \emph{Gaussian process} (GP) \citep{RasmussenWilliams2006Gaussian}.%
+\footnote{
+    \citet{RasmussenWilliams2006Gaussian} is a comprehensive textbook for GP classification and regression.
+    A reader seeking a treatment that is much more in-depth should consult \citet{RasmussenWilliams2006Gaussian}.
+}
+While there are many methods that have been developed to accomplish non-parameteric inference or handle error correlation,
+GP models have risen to prominence because in addition to their flexibility,
+they represent a principled, probabilistic approach
+that presents a very general framework applicable in a variety of settings \citep{ChengEtAl2019additive}.
+Moreover, they can outperform even tailored models for many inferential problems;
+for example, \citet{Carlson2020Modeling} finds GP regression to be more effective at handling error correlation
+in time-series cross-sectional data than other existing approaches.
+
+A GP is an infinite dimensional generalization of the normal distribution,
+where any finite subcollection of the process' variables are normally distributed.
+This is accomplished by specifying the mean and covariance of the distribution as a function of the predictors:
+
+\vspace*{-\baselineskip}
+\begin{align}
+    f & \sim \mathcal{GP} \left( \mu \left( X \right), K \left( X, X \right) \right),
+\end{align}
+
+\noindent
+where \( \mu \) is a function (such as, for example, \( X\beta \) for a vector of coefficients \( \beta \))
+that gives the mean of the distribution of \( f \) at \( X \) and
+\( K \left( X, X' \right) \) is a matrix-valued function that gives the covariance between values of \( f \) at \( X \) and \( X' \),
+such that for any finite set of observations \( \mathbf{X} \), \( \mathbf{f} = f \left( \mathbf{X} \right) \) has a prior distribution
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \mathbf{f} & \sim \mathcal{N} \left( \mu \left( \mathbf{X} \right), K \left( \mathbf{X}, \mathbf{X} \right) \right).
+\end{align}
+
+In the regression case,
+where \( y \) is continuous and we use a normal likelihood with variance \( \sigma_y^2 \),
+we can then learn about \( f \) after observing \( \mathbf{X} \) and \( \mathbf{y} \)
+by appyling Bayes' theorem along with Gaussian identities to derive the exact posterior over
+\( \mathbf{f} \),
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \mathbf{f} \mid \mathbf{X}, \mathbf{y}
+    & \sim
+    \mathcal{N} \left( \mathbf{m}^\ast, \mathbf{C}^\ast \right), \\
+    \mathbf{m}^\ast
+    & =
+    \mu \left( \mathbf{X} \right) + K K_y^{-1} \left( \mathbf{y} - \mu \left( \mathbf{X} \right) \right), \\
+    \mathbf{C}^\ast
+    & =
+    K - K K_y^{-1} K, \\
+    K_y & = K + \sigma_y^2 I,
+\end{align}
+
+\noindent
+where we write \( K = K \left( X, X \right) \) for more compact notation.%
+\footnote{
+    Although this derivation is available in multiple sources in varying levels of detail,
+    including \citet{RasmussenWilliams2006Gaussian},
+    I provide a derivation in the appendix as well.
+}
+Notice, then, that (for example) Bayesian linear regression is simply a special case of GP regression;
+GP regression with \( \mu \left( X \right) = 0 \) and \( K \left( X \right) = X X^T \) returns the same solution
+as linear regression with standard normal priors on the coefficients.
+
+This allows us to learn about \emph{potentially} nonlinear functions of \( X \) with very mild assumptions.
+The assumptions we are making about \( f \) are largely through our choice of the mean function
+\( \mu \) and the covariance function, or \emph{kernel}, \( K \).
+The common choice in the machine learning literature is to choose \( \mu \left( X \right) = 0 \),
+giving a vague prior over \( f \) % (see Figure~\ref{subfig:gpr-example-prior})
+where all learning about \( f \) goes through the kernel.
+We may also choose a linear mean, \( \mu \left( X \right) = X \beta \),
+encoding an assumption that \( f \) should have a linear trend,
+though perhaps with nonlinear deviations or correlated errors.
+
+An overwhelmingly popular choice for the kernel is the squared exponential covariance function,
+in which the covariance between \( f \left( \mathbf{x}_i \right) \) and \( f \left( \mathbf{x}_j \right) \)
+is given by
+
+\vspace*{-\baselineskip}
+\begin{align}
+    k \left( \mathbf{x}_i, \mathbf{x}_i \right)
+    & =
+    \sigma_f^2 \left( -0.5 \sum_d \dfrac{\left( x_{id} - x_{jd} \right)^2}{\ell_d^2} \right),
+\end{align}
+
+\noindent
+where \( \sigma_f^2 \) is a \emph{scale factor} scaling the entire prior covariance matrix
+and \( \boldsymbol\ell \) is a vector of \emph{length scales}.
+This kernel corresponds to assuming that (1) \( f \) is smooth,%
+\footnote{
+    For scholars interested in modeling functions that are not smooth,
+    other kernel options are available with a similar proximity assumption.
+    Please consult Chapter 4 in \citet{RasmussenWilliams2006Gaussian} for details.
+}
+and (2) the correlation between values of \( f \) should decrease with distance in the covariate space.
+Then \( \boldsymbol\ell \) determines how we define ``closeness'' along each dimension of \( X \).
+Often an isotropic version of this kernel is used where \( \ell \) is instead a scalar,
+treating distance in every dimension the same.
+This kernel should similarly be most useful in political science;
+these assumptions match up to problems where we must
+account for correlated errors across space or time \citep{Carlson2020Modeling, Gill2020Measuring},
+and notably is also equivalent to a linear model with infinite basis expansion.
+
+%% FIXME: Add example here
+
+For modeling discrete outcomes, the posterior becomes intractable;
+however, good approximations of the posterior in important cases have been derived.
+For example, for dichotomous outcomes, we simply say
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \Pr \left( y_i = 1 \right) & = \sigma \left( f \left( \mathbf{x}_i \right) \right), \\
+    f & \sim \mathcal{GP} \left( \mu \left( X \right), K \left( X \right) \right),
+\end{align}
+
+\noindent
+where \( f \) is then a latent function fed though \( \sigma \),
+which is some sigmoid ``squashing'' function mapping the reals to \( [0, 1] \),
+such as using a logistic or probit likelihood,
+to obtain the probability of a postitive response.
+This gives us a very similar setup to a generalized linear model such as the probit or logit regression,
+with the difference being that we do not assume as much about the structure of the latent function \( f \).
+While the posterior does not have a closed form as in the regression case,
+we can solve for a Laplace approximation to the posterior
+centered at the posterior mode \( \hat{\mathbf{f}} \),
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \mathbf{f} \mid \mathbf{X}, \mathbf{y}
+    & \sim
+    \mathcal{N} \left( \hat{\mathbf{f}}, \left( K^{-1} + W \right)^{-1} \right), \\
+    \hat{\mathbf{f}}
+    & =
+    \mu \left( \mathbf{X} \right) + K \left( \nabla \log p \left( \mathbf{y} \mid \hat{\mathbf{f}} \right) \right), \\
+    W & = -\nabla \nabla \log p \left( \mathbf{y} \mid \hat{\mathbf{f}} \right),
+\end{align}
+
+\noindent
+and other approximations based on minimizing Kullbeck-Liebler divergence are available as well,
+in addition to being able to simulate the posterior via MCMC sampling,
+commonly utilizing an elliptical slice sampler \citep{MurrayEtAl2010Elliptical}.
+
+In short, modelling the relationship between predictors and outcomes as a GP
+offers a number of advantages over other approaches.
+Unlike parametric approaches, we can be agnostic \emph{a priori} as to the shape of the relationship between predictors and outcomes,
+accounting for our typical uncertainty over functional form as social scientists.
+When compared to many non-parametric approaches that are similarly agnostic,
+the GP approach provides a more principled probabilistic approach that is more readily extended to varied settings.
+Finally, as I show in Section~\ref{sec:methods}, the GP approach
+still allows us to recover and make probabilistic statements about inferential quantities of interest to political scientists.
+
+
+\section{GP Models in Political Science}
+\label{sec:lit-review}
+
+While GP models have a longer history in statistics and machine learning, they are beginning to take hold in the study of politics.
+The GP approach is particularly suited to the study of politics as political scientists often confront situations in which
+we should acknowledge some uncertainty regarding functional form,
+or (as may be the modal case in political science) the common assumption of independent errors is violated.
+
+\citet{Carlson2020Modeling} considers TSCS data, common in many areas of political science,
+and recommends GP regression for those settings.
+\citet{Carlson2020Modeling} shows GP regression outperforms a variety of previous approaches
+such as lagged dependent variable, fixed effects, and random effects specifications,
+as well as panel-corrected standard errors in the TSCS setting.
+\citet{Gill2020Measuring} similarly utilizes a GP model to handle spatial autocorrelation.
+
+\citet{Duck-MayrEtAl2020GPIRT} develop an IRT model where,
+rather than assuming the functional form of the response functions,
+a GP prior is placed over latent response functions fed into a logistic likelihood.
+Among their applications demonstrating the method,
+the authors estimate ideology of members of the House of Representatives in the 116th U.S. Congress.
+They show this more flexible approach that acknowledges uncertainty over the functional form of the roll call votes' response functions
+allows for more plausible estimates of extremist members' ideology;
+while parametric methods that impose monotonicity of responses in ideology force extreme members such as
+Rep. Alexandria Ocasio-Cortez who often vote against the moderate proposals of her own party to be placed closer to the opposing party,
+a flexible GP approach can recognize that members such as she should be placed at the end of the ideological spectrum and instead
+allow the item response function to bend downwards in such situations.
+
+As political scientists are increasingly taking advantage of the flexible GP approach to handle data
+that pose difficulties for inference using traditional approaches,
+I next provide practical guidance for applied researchers
+and derive distributions of inferential quantities of interest to political scientists
+that are not covered in the machine learning literature where the lion's share of study of GP models has occurred.
+
+
+\section{Tools for Inference in GP Models}
+\label{sec:methods}
+
+A common goal for those employing GP models is out of sample prediction,
+so the typical inferential quantity of interest is the distribution of the unknown function at test points.
+The machine learning literature on GP models has largely focused on this sort of inference in various settings.
+Political scientists are more often interested in parsing out the effects of the predictors.
+After explaining the usual process for inference in GP models,
+I will also show how to derive two types of effects of predictors:
+the distribution of coefficients if a linear mean function is employed,
+and the distribution of average marginal effects of predictors whether or not a linear mean function is employed.
+The former is useful for determining the contribution of a predictor to a linear trend within \( f \),
+while the latter is necessary for uncovering the full average effect of a predictor on outcomes,
+since we allow for a potentially nonlinear relationship between predictors and outcomes.
+A convenient interface to obtain the distribution of all of these quantities is provided in an \texttt{R} package.%
+\footnote{
+    A number of packages are available for fitting and predicting out of sample for GP models,
+    both in R and in a number of other programming languages and software environments including python and MATLAB.
+    However, no currently available software implements average marginal effects
+    or provides posterior inference over linear mean function coefficients.
+}
+
+When the goal is prediction, inference for GP models often follows the following sequence:
+first, make choices about the GP prior, including the structure of the mean and covariance functions;
+next, set the parameters of the mean and covariance functions
+(such as the coefficients of a linear mean function, or the scale factor of a squared exponential covariance function)
+as a model selection step by choosing them to use the GP prior that maximizes
+the log marginal likelihood of the model given the training data;
+finally, use the training data and the selected hyperparameters to predict out of sample for test data.
+This workflow is very effective for generating probabilistic predictions for unknown data generating processes.
+
+The posterior predictive distribution for GP models is
+XXX
+
+However, often other inferential quantities are of more interest than out of sample predictions.
+For example, suppose you believe the important underlying relationship between your predictors and outcomes is in fact linear,
+but you also want to explicitly model and account for correlated errors, as in \citet{Carlson2020Modeling}.
+Then you may use a model of the following form:
+
+\vspace*{-\baselineskip}
+\begin{align}
+    y & \sim \mathcal{N} \left( f \left( X \right), \sigma_y^2 I \right), \\
+    f & \sim \mathcal{GP} \left( X \beta, K \left( X, X \right) \right),
+\end{align}
+
+\noindent
+where your quantity of interest is \( \beta \).
+Then it would not be useful to treat the mean function parameters as a model selection problem;
+rather we want to find the distribution of those parameters themselves instead of the distribution of \( f \).
+One approach would be to place priors on the mean function \emph{and} covariance function parameters
+to get the posterior distribution of all the GP prior's hyperparameters;
+this approach, taken in \citet{Carlson2020Modeling}, however, generally requires MCMC sampling,
+as priors on the covariance function hyperparameters generally result in the posterior being analytically intractible.%
+\footnote{
+    A bespoke MCMC sampler for GP regression with priors on all hyperparameters is also offered in the R package,
+    which provides samples \emph{much} faster than the general-purpose Stan implementation used for \citet{Carlson2020Modeling}.
+}
+
+If the covariance function parameters are not directly of interest, however,
+we can set those using Bayesian model selection as in the general prediction workflow;
+then, with covariance function parameters in hand, the posterior distribution of \( \beta \) is
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \beta \mid \mathbf{y}, \mathbf{X} & \sim \mathcal{N}(\bar{\beta}, \Sigma_\beta), \\
+    \bar{\beta} & = ( B^{-1} + \mathbf{X}^T K_y^{-1} \mathbf{X} )^{-1} ( B^{-1} \mathbf{b} + \mathbf{X}^T K_y^{-1} \mathbf{y} ), \\
+    \Sigma_\beta & = ( B^{-1} + \mathbf{X}^T K_y^{-1} \mathbf{X} )^{-1},
+\end{align}
+
+\noindent
+where \( \mathbf{b} \) is the prior mean of \( \beta \) and \( B \) is the prior covariance of \( \beta \).%
+\footnote{
+    See \citet{RasmussenWilliams2006Gaussian} Section 2.7.
+    A full derivation is also offered in the appendix.
+}
+
+However, if our motivation for using a GP approach is flexibility in the form of \( f \)
+rather than being interested only in posterior inference over a linear trend contained in \( f \),
+we should instead perform inference on the \emph{average marginal effect} of our predictors.
+As this is not a task common in the use of GP models,
+the machine learning literature on GP models provides no explicit derivation for this quantity,
+although for other reasons, building blocks we need for it have previously been derived.
+
+To formalize, we want to reason about the relationship between predictors \( X \) and outcomes \( y \),
+and specifically wish to know the marginal effect of a particular predictor \( d \), i.e., the \( d \)th feature of \(X \).
+In a parametric regression model where we assume \( f \left( X \right) = X\beta \) and simply estimate \( \beta \),
+the marginal effect of \( X_d \) is easy to see:
+\( \dfrac{\pd f \left( \mathbf{x}_i \right) }{\pd x_{id}} = \hat{\beta}_d, \forall i \).
+In GP regression and classification,
+we gain a much more flexible model that allows for non-independence of observations and non-linear mappings from \( X \) to \( y \),
+but then feature \( d \) does not have a constant effect on \( y \).
+We can summarize the effect of feature \( d \) on \( y \) with the sample average marginal effect,%
+\footnote{
+    See \citet{HainmuellerHazlett2014Kernel} for a similar approach with kernel-regularized least squares.
+}
+which in the regression context is defined as
+
+\begin{equation}
+    \gamma_d \triangleq \dfrac{1}{N} \sum_{i = 1}^N \dfrac{\pd f \left( \mathbf{x}_i \right) }{\pd x_{id}}.
+\end{equation}
+
+\noindent
+For classification, \( \gamma_d \) gives us the sample average partial effect,
+or the sample average effect on the latent function \( f \),
+which does not directly translate to the average marginal effect on our dichotomous outcomes \( y \).
+In this case, often of more interest than \( \gamma_d \) is
+
+\begin{equation}
+    \pi_d \triangleq \dfrac{1}{N} \sum_i^N \dfrac{\pd \sigma \left( f \left( \mathbf{x}_i \right) \right)}{\pd x_{id}},
+\end{equation}
+
+\noindent
+which gives the average marginal effect of predictor \( d \) on the function \( \sigma \left( f \left( X \right) \right) \)
+that gives the probability of a positive response.
+
+Moreover, when \( d \) is discrete, instanteous change in \( f \) at our observed points is not meaningful;
+then we want the average discrete change in \( f \) at levels of predictor \( d \).
+For binary variables, let \( \mathbf{X}_1^\ast \) be a set of test points where all feature observactions are identical to \( \mathbf{X} \)
+except that all observations of feature \( d \) have been set to 1, and analogously for \( \mathbf{X}_0^\ast \).%
+\footnote{
+    You can replace 1 and 0 with other binary value labels as needed.
+}
+Then a more appropriate quantity of interest rather than \( \gamma_d \) is
+
+\begin{equation}
+    \delta_d = \dfrac{1}{N} \sum_{i=1}^N f \left( \mathbf{x}_{1i}^\ast \right) - f \left( \mathbf{x}_{0i}^\ast \right),
+\end{equation}
+
+\noindent
+which gives the average marginal effect on \( y \) of taking a 1 vs a 0 value in the regression case,
+or the average partial effect on \( f \) of taking a 1 vs a 0 value in the classification case.
+For classification, the effect on the probability scale is
+
+\begin{equation}
+    \psi_d = \dfrac{1}{N} \sum_{i=1}^N \sigma \left( f \left( \mathbf{x}_{1i}^\ast \right) \right) - \sigma \left( f \left( \mathbf{x}_{0i}^\ast \right) \right).
+\end{equation}
+
+\noindent
+For categorical variables, we simply find \( \delta_d \) or \( \psi_d \) for all substantively interesting pairwise comparisons of
+levels of the categorical variable.
+(Often this is comparing the various categorical labels to one ``baseline'' label).
+
+Our starting point for deriving these quantities is noting that
+``[s]ince differentiation is a linear operator, the derivative of a Gaussian process is another Gaussian process''
+\citep[191]{RasmussenWilliams2006Gaussian}.
+Let
+
+\begin{equation}
+    \gradient = 
+    \begin{bmatrix}
+        \dfrac{\pd f_1}{\pd x_{1d}} \\
+        \vdots \\
+        \dfrac{\pd f_n}{\pd x_{nd}}
+    \end{bmatrix}.
+\end{equation}
+
+Using Equation 9.1 in \citet{RasmussenWilliams2006Gaussian},
+
+\vspace*{-\baselineskip}
+\begin{align}
+    K_d \triangleq
+    \C \left[ \gradient, \mathbf{f} \right]
+    & = 
+    \begin{bmatrix}
+        \dfrac{\pd k \left(\mathbf{x}_1, \mathbf{x}_1 \right)}{\pd x_{1d}} & \ldots & \dfrac{\pd k \left(\mathbf{x}_1, \mathbf{x}_n \right)}{\pd x_{1d}} \\
+        \vdots                                                       & \ddots & \vdots \\
+        \dfrac{\pd k \left(\mathbf{x}_n, \mathbf{x}_1 \right)}{\pd x_{nd}} & \ldots & \dfrac{\pd k \left(\mathbf{x}_n, \mathbf{x}_n \right)}{\pd x_{nd}}
+    \end{bmatrix}, \\[1em]
+    K_{dd} \triangleq
+    \C \left[ \gradient, \gradient \right]
+    & = 
+    \begin{bmatrix}
+        \dfrac{\pd^2 k \left(\mathbf{x}_1, \mathbf{x}_1 \right)}{\pd x_{1d} \, \pd x_{1d}} & \ldots & \dfrac{\pd^2 k \left(\mathbf{x}_1, \mathbf{x}_n \right)}{\pd x_{1d} \, \pd x_{nd}} \\
+        \vdots                                                       & \ddots & \vdots \\
+        \dfrac{\pd^2 k \left(\mathbf{x}_n, \mathbf{x}_1 \right)}{\pd x_{nd} \, \pd x_{1d}} & \ldots & \dfrac{\pd^2 k \left(\mathbf{x}_n, \mathbf{x}_n \right)}{\pd x_{nd} \, \pd x_{nd}}
+    \end{bmatrix},
+\end{align}
+
+To make the notation more compact, as is usual we set \( K = K \left( \mathbf{X}, \mathbf{X} \right) \), 
+and additionally set \( \mu = \mu \left( \mathbf{X} \right) \)
+and
+
+\begin{equation}
+    \mu_d
+    =
+    \begin{bmatrix}
+        \dfrac{\pd \mu \left( \mathbf{x}_1 \right)}{\pd x_{1d}} \\
+        \vdots \\
+        \dfrac{\pd \mu \left( \mathbf{x}_n \right)}{\pd x_{nd}}
+    \end{bmatrix}.
+\end{equation}
+
+Then we can describe the joint prior on \( \mathbf{f} \) and \( \gradient \):
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \begin{bmatrix}
+        \mathbf{f} \\
+        \gradient
+    \end{bmatrix}
+    \sim
+    \N
+    \left(
+        \begin{bmatrix}
+            \mu \\
+            \mu_d
+        \end{bmatrix},
+        \begin{bmatrix}
+            K   & K_d^T \\
+            K_d & K_{dd}
+        \end{bmatrix}
+    \right),
+\end{align}
+
+\noindent
+and the posterior distribution of \( \gradient \) given \( \mathbf{X} \) and \( \mathbf{y} \) is normal with mean
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \E \left[ \gradient \mid \mathbf{X}, \mathbf{y} \right]
+    & =
+    \int \E \left[ \gradient \mid \mathbf{f}, \mathbf{X} \right] p \left( \mathbf{f} \mid \mathbf{X}, \mathbf{y} \right) d\mathbf{f}
+    \nonumber \\
+    & =  \mu_d + K_d \, K^{-1} \left( \E \left[ \mathbf{f} \mid \mathbf{X}, \mathbf{y} \right] - \mu \right),
+\end{align}
+
+and variance (using the law of total variance)
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \V \left[ \gradient \mid \mathbf{X}, \mathbf{y} \right]
+    & =
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + \E \left[ \left( \E \left[ \gradient \mid \mathbf{f} \right] - \E \left[ \gradient \mid \mathbf{X}, \mathbf{y} \right] \right)^2 \right] \nonumber \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \V \left[ \mathbf{f} \mid \mathbf{X}, \mathbf{y} \right] K^{-1} \right) K_d^T.
+\end{align}
+
+\noindent
+(The full derivations for all results in this section are provided in the appendix for the interested reader).
+In the regression case,
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = \mu_d + K_d \, K_y^{-1} \left( \mbf{y} - \mu \right), \\
+    \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = 
+    K_{dd} - K_d \, K_y^{-1} \, K_d^T,
+\end{align}
+
+\noindent
+For classification, under the Laplace approximation to the posterior,
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = \mu_d + K_d \, \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right), \\
+    \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = 
+    K_{dd} - K_d \left( K + W^{-1} \right)^{-1} K_d^T.
+\end{align}
+
+Since then \( \gamma_d \) is a constant ( \( 1/N \) ) times the sum of correlated normal random variables,
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \gamma_d
+    & \sim
+    \N \left(
+        \dfrac{1}{N} \sum_{i=1}^N m_{\gamma_d i} \, , \,
+        \dfrac{1}{N^2} \sum_{j=1}^N \sum_{i=1}^N c_{\gamma_d ij}
+    \right), \label{eq:avg-partial-distribution} \\
+    \mbf{m}_{\gamma_d} & = \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right] \\
+    \mbf{C}_{\gamma_d} & = \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+\end{align}
+
+\noindent
+Importantly, we may also get the average marginal effect of feature \( d \) within subgroups of \( \mbf{X} \)
+rather than the full sample average by simply altering the indices of summation in
+Equation~\ref{eq:avg-partial-distribution}.
+The distribution of \( \delta_d \) is analogous:
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \delta_d
+    & \sim
+    \N \left(
+        \dfrac{1}{N} \sum_{i=1}^N m_{\delta_d i} \, , \,
+        \dfrac{1}{N^2} \sum_{j=1}^N \sum_{i=1}^N c_{\delta_d ij}
+    \right), \label{eq:avg-difference-distribution} \\
+    \mbf{m}_{\delta_d} & = \E \left[ \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right] - \E \left[ \mbf{f}_0^\ast \mid \mbf{X}, \mbf{y} \right], \\
+    \mbf{C}_{\delta_d}
+    & =
+    \V \left[ \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right]
+    + \V \left[ \mbf{f}_0^\ast \mid \mbf{X}, \mbf{y} \right]
+    + \C \left[ \mbf{f}_1^\ast, \mbf{f}_0^\ast  \mid \mbf{X}, \mbf{y} \right]
+    + \C \left[ \mbf{f}_0^\ast, \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right].
+\end{align}
+
+
+Unfortunately, the distribution \( \pi_d \) cannot be analytically expressed, though we can readily simulate from it.
+First note that
+
+\begin{equation}
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd x_{id}}
+    =
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd f}
+    \dfrac{\pd f \left( \mbf{x}_i \right)}{\pd x_{id}}.
+\end{equation}
+
+Generally the sigmoid function \( \sigma \) has a known derivative;
+for example, in the logistic case,
+
+\begin{equation}
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd f}
+    =
+    \sigma \left( f \left( \mbf{x}_i \right) \right) \left( 1 - \sigma \left( f \left( \mbf{x}_i \right) \right) \right).
+\end{equation}
+
+\noindent
+Since we have an approximation to the posterior on \( f \), and given \( f \), the posterior over \( \mbf{f}_d \) is
+
+\begin{align}
+    \mbf{f}_d \mid \mbf{f}
+    & \sim
+    \N \left( \mu_d + K_d \, K^{-1} \left( \mbf{f} - \mu \right), K_{dd} - K_{d} \, K^{-1} \, K_d^T \right),
+\end{align}
+
+we can obtain \( M \) samples of \( \pi_d \) by
+
+\begin{itemize}
+    \item drawing \( \mbf{f}^t \) from the chosen posterior approximation, such as the Laplace approximation
+        \(
+            \N \left(
+                \mu + K \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right), \left( K^{-1} + W \right)^{-1}
+            \right)
+        \),%
+        \footnote{
+            At this point, since we have resorted to simulation, it may be tempting to use ESS to draw from the posterior.
+            This can be done, but then we lose the ability to perform simple model selection for GP prior hyperparameters,
+            resulting in markedly increased computation time.
+        }
+    \item drawing \( \mbf{f}^t_d \) from
+        \(
+            \N \left(
+                \mu_d + K_d \, K^{-1} \left( \mbf{f}^t - \mu \right), K_{dd} - K_{d} \, K^{-1} \, K_d^T
+            \right)
+        \),
+    \item and calculating \( \pi_d^t = \dfrac{1}{N} \displaystyle\sum_{i=1}^N \dfrac{\pd \sigma \left( f_i^t \right)}{\pd f} f_{id}^t \),
+\end{itemize}
+
+so that we can summarize the distribution of \( \pi_d \) using the \( M \) draws,
+similar to the CLARIFY procedure \citep{KingEtAl2000Making}.
+We can also similarly simulate the distribution of \( \psi_d \)
+by simply generating values of \( f \left( \mbf{X}_1^\ast \right) \) and \( f \left( \mbf{X}_0^\ast \right) \)
+from the posterior approximation, pushing those samples through the chosen sigmoid \( \sigma \),
+and calculate the average of the differences to get the average marginal effect for each sample
+so that we can summarize the distribution of average marginal effects.
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+
+\clearpage
+\bibliographystyle{apsr}
+\bibliography{refs.bib}
+
+\end{document}
+
