@@ -125,7 +125,7 @@ by appyling Bayes' theorem along with Gaussian identities to derive the exact po
 \begin{align}
     \mathbf{f} \mid \mathbf{X}, \mathbf{y}
     & \sim
-    \mathcal{N} \left( \mathbf{m}^\ast, \mathbf{C}^\ast \right), \\
+    \mathcal{N} \left( \mathbf{m}^\ast, \mathbf{C}^\ast \right), \label{eq:gpr-posterior} \\
     \mathbf{m}^\ast
     & =
     \mu \left( \mathbf{X} \right) + K K_y^{-1} \left( \mathbf{y} - \mu \left( \mathbf{X} \right) \right), \\
@@ -185,7 +185,50 @@ these assumptions match up to problems where we must
 account for correlated errors across space or time \citep{Carlson2020Modeling, Gill2020Measuring},
 and notably is also equivalent to a linear model with infinite basis expansion.
 
-%% FIXME: Add example here
+To make this more concrete, consider the following example, where
+
+\vspace*{-\baselineskip}
+\begin{align}
+    f \left( x \right) & = 2 \sin \left( 2x \right) + x, \\
+    y & = f \left( x \right) + \varepsilon, \\
+    \varepsilon & \sim \mathcal{N} \left( 0, 1 \right).
+\end{align}
+
+\noindent
+So, we have a function mapping the single predictor variable \( x \) to outcomes \( y \) with a linear trend
+and we have independent noise, but the function also has systematic nonlinear deviations.
+Figure~\ref{subfig:gpr-example-prior} shows a vague, zero-mean GP prior over \( f \), using the squared exponential covariance function.
+I simulated 250 \( x \) values, drawn from a uniform distribution with bounds \( -\pi \) and \( \pi \)
+(which allows for two full oscillations of \( f \)),
+then simulated corresponding \( y \) values with standard normal noise.
+We can see the posterior from Equation~\ref{eq:gpr-posterior} depicted in Figure~\ref{subfig:gpr-example-posterior};
+essentially we have taken the somewhat mild assumptions encoded by the covariance function
+that \( f \) is smooth and that covariance between function outputs decreases with distance in \( x \)
+to derive a reasonable estimate of \( f \) (depicted with the solid line)
+with a measure of uncertainty (depicted with the shaded region).
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width = \linewidth]{plots/gpr-example-prior.pdf}
+        \caption{The GP prior}
+        \label{subfig:gpr-example-prior}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width = \linewidth]{plots/gpr-example-posterior.pdf}
+        \caption{The GP regression posterior}
+        \label{subfig:gpr-example-posterior}
+    \end{subfigure}
+    \caption{
+        An example GP prior and posterior for the function \( f \left( x \right) = 2 \sin \left( 2x \right) + x \),
+        where the data were simulated as
+        \( x \sim U \left( -\pi, \pi \right), y = f \left(x\right) + \varepsilon, \varepsilon \sim \mathcal{N} \left( 0, 1 \right) \).
+        Simulated data points are depicted with crosses,
+        the prior (posterior) mean with a solid line and the 95\% CI with a shaded region,
+        and the true \( f\left(x\right) \) with a dashed line.
+    }
+    \label{fig:gpr-example}
+\end{figure}
 
 For modeling discrete outcomes, the posterior becomes intractable;
 however, good approximations of the posterior in important cases have been derived.
@@ -212,7 +255,7 @@ centered at the posterior mode \( \hat{\mathbf{f}} \),
 \begin{align}
     \mathbf{f} \mid \mathbf{X}, \mathbf{y}
     & \sim
-    \mathcal{N} \left( \hat{\mathbf{f}}, \left( K^{-1} + W \right)^{-1} \right), \\
+    \mathcal{N} \left( \hat{\mathbf{f}}, \left( K^{-1} + W \right)^{-1} \right), \label{eq:gpc-posterior} \\
     \hat{\mathbf{f}}
     & =
     \mu \left( \mathbf{X} \right) + K \left( \nabla \log p \left( \mathbf{y} \mid \hat{\mathbf{f}} \right) \right), \\
@@ -224,8 +267,40 @@ and other approximations based on minimizing Kullbeck-Liebler divergence are ava
 in addition to being able to simulate the posterior via MCMC sampling,
 commonly utilizing an elliptical slice sampler \citep{MurrayEtAl2010Elliptical}.
 
-In short, modelling the relationship between predictors and outcomes as a GP
-offers a number of advantages over other approaches.
+Taking the same example function and simulated \( x \) values we used to illustrate GP regression,
+I draw corresponding dichotomous \( y \) values where \( \Pr\left(y = 1\right) = \sigma\left(f\left(x\right)\right) \),
+where \( \sigma \) is the logistic function.
+A zero mean GP prior with squared exponential covariance function is depicted in Figure~\ref{subfig:gpc-example-prior},
+and the Laplace approximation of the posterior from Equation~\ref{eq:gpc-posterior}
+is depicted in Figure~\ref{subfig:gpc-example-posterior}.
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width = \linewidth]{plots/gpc-example-prior.pdf}
+        \caption{The GP prior}
+        \label{subfig:gpc-example-prior}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.45\textwidth}
+        \includegraphics[width = \linewidth]{plots/gpc-example-posterior.pdf}
+        \caption{Laplace approximation of the posterior}
+        \label{subfig:gpc-example-posterior}
+    \end{subfigure}
+    \caption{
+        An example GP prior and posterior for the function \( f \left( x \right) = 2 \sin \left( 2x \right) + x \),
+        where the data were simulated as
+        \( x \sim U \left( -\pi, \pi \right), \Pr\left(y = 1\right) = \sigma\left(f\left(x\right)\right) \),
+        where \( \sigma \) is the logistic function.
+        Observations receiving positive labels are depicted in the rug on the top margin,
+        while observations receiving negative labels are depicted in the rug on the bottom margin;
+        the prior (posterior) mean with a solid line and the 95\% CI with a shaded region,
+        and the true \( f\left(x\right) \) with a dashed line.
+    }
+    \label{fig:gpc-example}
+\end{figure}
+
+Modelling the relationship between predictors and outcomes as a GP offers
+a flexible but principled approach with a number of advantages over other approaches.
 Unlike parametric approaches, we can be agnostic \emph{a priori} as to the shape of the relationship between predictors and outcomes,
 accounting for our typical uncertainty over functional form as social scientists.
 When compared to many non-parametric approaches that are similarly agnostic,
@@ -237,7 +312,7 @@ still allows us to recover and make probabilistic statements about inferential q
 \section{GP Models in Political Science}
 \label{sec:lit-review}
 
-While GP models have a longer history in statistics and machine learning, they are beginning to take hold in the study of politics.
+While GP models have a longer history in statistics and machine learning, they are just beginning to take hold in the study of politics.
 The GP approach is particularly suited to the study of politics as political scientists often confront situations in which
 we should acknowledge some uncertainty regarding functional form,
 or (as may be the modal case in political science) the common assumption of independent errors is violated.
@@ -298,9 +373,24 @@ as a model selection step by choosing them to use the GP prior that maximizes
 the log marginal likelihood of the model given the training data;
 finally, use the training data and the selected hyperparameters to predict out of sample for test data.
 This workflow is very effective for generating probabilistic predictions for unknown data generating processes.
+The posterior predictive distribution for GP regression at test cases \( \mathbf{X}^\ast \) is
 
-The posterior predictive distribution for GP models is
-XXX
+\vspace*{-\baselineskip}
+\begin{align}
+    \mathbf{f}^\ast \mid \mathbf{y}, \mathbf{X}
+    & \sim \mathcal{N} \left( \mu \left( \mathbf{X}^\ast \right) + K_\ast K_y^{-1} \left( \mathbf{y} - \mu \left( \mathbf{X} \right) \right), K_{\ast\ast} - K_\ast K_y^{-1} K_\ast^T \right),
+\end{align}
+
+\noindent
+with a common shorthand of \( K_\ast = K \left( \mathbf{X}^\ast, \mathbf{X} \right) \)
+and \( K_{\ast\ast} = K \left( \mathbf{X}^\ast, \mathbf{X}^\ast \right) \),
+and the posterior predictive distribution for classification (using the Laplace approximation) is
+
+\vspace*{-\baselineskip}
+\begin{align}
+    \mathbf{f}^\ast \mid \mathbf{y}, \mathbf{X}
+    & \sim \mathcal{N} \left( \mu \left( \mathbf{X}^\ast \right) + K_\ast \nabla \log p \left( \mathbf{y} \mid \hat{\mathbf{f}} \right), K_{\ast\ast} - K_\ast \left( K + W^{-1} \right)^{-1} K_\ast^T \right).
+\end{align}
 
 However, often other inferential quantities are of more interest than out of sample predictions.
 For example, suppose you believe the important underlying relationship between your predictors and outcomes is in fact linear,
@@ -347,7 +437,7 @@ where \( \mathbf{b} \) is the prior mean of \( \beta \) and \( B \) is the prior
 However, if our motivation for using a GP approach is flexibility in the form of \( f \)
 rather than being interested only in posterior inference over a linear trend contained in \( f \),
 we should instead perform inference on the \emph{average marginal effect} of our predictors.
-As this is not a task common in the use of GP models,
+As this is not a task common in the use of GP models in computer science,
 the machine learning literature on GP models provides no explicit derivation for this quantity,
 although for other reasons, building blocks we need for it have previously been derived.
 
@@ -393,7 +483,7 @@ except that all observations of feature \( d \) have been set to 1, and analogou
 Then a more appropriate quantity of interest rather than \( \gamma_d \) is
 
 \begin{equation}
-    \delta_d = \dfrac{1}{N} \sum_{i=1}^N f \left( \mathbf{x}_{1i}^\ast \right) - f \left( \mathbf{x}_{0i}^\ast \right),
+    \delta_d \triangleq \dfrac{1}{N} \sum_{i=1}^N f \left( \mathbf{x}_{1i}^\ast \right) - f \left( \mathbf{x}_{0i}^\ast \right),
 \end{equation}
 
 \noindent
@@ -402,7 +492,7 @@ or the average partial effect on \( f \) of taking a 1 vs a 0 value in the class
 For classification, the effect on the probability scale is
 
 \begin{equation}
-    \psi_d = \dfrac{1}{N} \sum_{i=1}^N \sigma \left( f \left( \mathbf{x}_{1i}^\ast \right) \right) - \sigma \left( f \left( \mathbf{x}_{0i}^\ast \right) \right).
+    \psi_d \triangleq \dfrac{1}{N} \sum_{i=1}^N \sigma \left( f \left( \mathbf{x}_{1i}^\ast \right) \right) - \sigma \left( f \left( \mathbf{x}_{0i}^\ast \right) \right).
 \end{equation}
 
 \noindent
@@ -483,7 +573,15 @@ Then we can describe the joint prior on \( \mathbf{f} \) and \( \gradient \):
 \end{align}
 
 \noindent
-and the posterior distribution of \( \gradient \) given \( \mathbf{X} \) and \( \mathbf{y} \) is normal with mean
+and for regression and under normal approximations of the posterior for classification,%
+\footnote{
+    When simulating the posterior for classification rather than using an analytical approximation,
+    \( \mathbf{f}_d \) is normally distributed given each \( \mathbf{f} \) draw
+    (with mean \( \mu_d + K_d K^{-1} \left( \mathbf{f} - \mu \right) \)
+    and variance \( K_{dd} - K_d K^{-1} K_d^T \)),
+    so \( \mathbf{f}_d \) samples can simply be taken conditioned on the \( \mathbf{f} \) samples.
+}
+the posterior distribution of \( \gradient \) given \( \mathbf{X} \) and \( \mathbf{y} \) is normal with mean
 
 \vspace*{-\baselineskip}
 \begin{align}
@@ -494,7 +592,7 @@ and the posterior distribution of \( \gradient \) given \( \mathbf{X} \) and \( 
     & =  \mu_d + K_d \, K^{-1} \left( \E \left[ \mathbf{f} \mid \mathbf{X}, \mathbf{y} \right] - \mu \right),
 \end{align}
 
-and variance (using the law of total variance)
+and variance % (using the law of total variance)
 
 \vspace*{-\baselineskip}
 \begin{align}
@@ -627,6 +725,41 @@ by simply generating values of \( f \left( \mbf{X}_1^\ast \right) \) and \( f \l
 from the posterior approximation, pushing those samples through the chosen sigmoid \( \sigma \),
 and calculate the average of the differences to get the average marginal effect for each sample
 so that we can summarize the distribution of average marginal effects.
+
+We can illustrate the use of average marginal effects in GP models by returning to our previous example.
+For the function \( f(x) = 2 \sin \left( x \right) + x \) where \( x \sim U \left(-\pi, \pi\right) \),
+the true average marginal effect of \( x \) on \( f \left( x \right) \) is 1---%
+the oscillations cancel out and we are left with the effect of the linear term.
+In other words, on average, \( f\left(x\right) \) increases with \(x\) at a rate of 1,
+which is often the type of information we want to have about functions of interest as political scientists.
+For the dichotomous simulated data we may also be interested in the average slope of \( \sigma\left(f\left(x\right)\right) \);
+here, the true average marginal effect of \( x \) on \( \sigma\left(f\left(x\right)\right) \) is \( 0.146 \).
+Figure~\ref{fig:example-ames} shows the posterior means and 95\% CIs for the average marginal effects
+in the regression and classification cases, with linear model baselines depicted for comparison;
+we can see the average marginal effect on both \( f\left(x\right) \) and \( \sigma\left(f\left(x\right)\right) \)
+is captured well by the GP models.
+Even though there is a true linear trend in \( f \)
+and the nonlinear deviations are designed to cancel out over the range of the simulated \(x\) values,
+the linear models by contrast poorly estimate the average marginal effect of \( x \) on both the link and probability scales.
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{0.6\textwidth}
+        \includegraphics[width = \linewidth]{plots/example-ame-link.pdf}
+        \caption{AME of \(x\) on \(f\left(x\right)\)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width = \linewidth]{plots/example-ame-prob.pdf}
+        \caption{AME of \(x\) on \(\sigma\left(f\left(x\right)\right)\)}
+    \end{subfigure}
+    \caption{
+        Average marginal effect (AME) of \( x \) from the simulation in Section~\ref{sec:gp-primer}.
+        The left panel shows the AME of \( x \) on \( f\left(x\right) \) for both regression and classification;
+        the right panel shows the AME of \( x \) on the probability of a positive outcome in classification.
+        The true theoretical AME is given by the dashed line in both panels.
+    }
+    \label{fig:example-ames}
+\end{figure}
 
 
 \section{Conclusion}
