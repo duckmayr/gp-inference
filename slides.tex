@@ -1,0 +1,218 @@
+\documentclass{beamer}
+
+\usepackage{lmodern}
+
+\usetheme{Boadilla}
+\usecolortheme{spruce}
+\useinnertheme{circles}
+
+\title[Inference in GP Models]{Inference in Gaussian Process Models for Political Science}
+\author[Duck-Mayr]{JBrandon Duck-Mayr}
+\date{December 17, 2020}
+
+\usepackage{subcaption}
+
+\begin{document}
+
+\begin{frame}
+    \titlepage
+\end{frame}
+
+\begin{frame}
+    \frametitle{Common problems in political science}
+    \pause
+    \begin{itemize}[<+->]
+        \item Uncertainty about functional forms
+        \item Violation of conditional independence
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Some previous solutions}
+    \begin{itemize}
+        \item Uncertainty about functional forms
+        \onslide<2-3>{
+            \begin{itemize}
+                \item Nonparametric methods, such as KRLS {\footnotesize\textcolor{gray}{(Hainmuller and Hazlett 2014)}}
+                \item Strong theoretical founding to reduce uncertainty
+                \item Ignoring or ad hoc or under-justified basis functions
+            \end{itemize}
+        }
+        \item Violation of conditional independence
+        \onslide<3>{
+            \begin{itemize}
+                \item Lagged DV
+                \item Fixed or random effects specifications
+                \item Standard error adjustments
+            \end{itemize}
+        }
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Newer solution: Gaussian process models}
+    \pause
+    Advantages:
+    \begin{itemize}
+        \item Principled probabilistic framework
+        \item Flexible and extensible
+        \item Outperforms existing solutions {\footnotesize\textcolor{gray}{(Carlson 2020)}} 
+    \end{itemize}
+    \pause
+    Increasingly being used to study politics:
+    \begin{itemize}
+        \item Carlson (2020)
+        \item Gill (2020)
+        \item Duck-Mayr, Garnett, and Montomery (2020)
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Contribution: Social science-style inference with GPs}
+    GP models come from ML literature; most existing derivations/routines don't give us what we want
+    \pause
+
+    \vspace{\baselineskip}
+    Carlson (2020) uses sampling for all parameters via Stan
+    \pause
+
+    \vspace{\baselineskip}
+    I provide:
+    \begin{itemize}
+        \item Closed-form solution for posterior over coefficients when we are willing to assume linearity but are worried about conditional independence
+        \item Average marginal effect derivation when we are worried about functional form
+    \end{itemize}
+\end{frame}
+
+\begin{frame}
+    \frametitle{Primer on GP models}
+    Instead of saying \( y = f \left( X \right) + \varepsilon \) for fixed \( f \), we put \textit{GP prior} over \( f \):
+
+    \[
+        f \sim \mathcal{GP} \left( \mu \left( X \right), K \left( X, X \right) \right),
+    \]
+
+    so that for any finite set of observations $\mathbf{X}$,
+    \( \mathbf{f} = f \left( \mathbf{X} \right) \) has a prior distribution
+
+    \[
+        \mathbf{f} \sim \mathcal{N} \left( \mu \left( \mathbf{X} \right), K \left( \mathbf{X}, \mathbf{X} \right) \right).
+    \]
+
+    We can then get the posterior over \( \mathbf{f} \) by applying Bayes' rule and Gaussian identities.
+\end{frame}
+
+\begin{frame}
+    \frametitle{Primer on GP models: Regression example}
+
+    \begin{figure}[htb]
+        \centering
+        \begin{subfigure}[b]{0.45\textwidth}
+            \includegraphics[width = \linewidth]{plots/gpr-example-prior.pdf}
+            \caption{The GP prior}
+            \label{subfig:gpr-example-prior}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.45\textwidth}
+            \includegraphics[width = \linewidth]{plots/gpr-example-posterior.pdf}
+            \caption{The GP regression posterior}
+            \label{subfig:gpr-example-posterior}
+        \end{subfigure}
+        \caption{
+            An example GP prior and posterior for the function \( f \left( x \right) = 2 \sin \left( 2x \right) + x \),
+            where the data were simulated as
+            \( x \sim U \left( -\pi, \pi \right), y = f \left(x\right) + \varepsilon, \varepsilon \sim \mathcal{N} \left( 0, 1 \right) \).
+            Simulated data points are depicted with crosses,
+            the prior (posterior) mean with a solid line and the 95\% CI with a shaded region,
+            and the true \( f\left(x\right) \) with a dashed line.
+        }
+        \label{fig:gpr-example}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Primer on GP models: Classification example}
+
+    \begin{figure}[htb]
+        \centering
+        \begin{subfigure}[b]{0.45\textwidth}
+            \includegraphics[width = \linewidth]{plots/gpc-example-prior.pdf}
+            \caption{The GP prior}
+            \label{subfig:gpc-example-prior}
+        \end{subfigure}
+        \begin{subfigure}[b]{0.45\textwidth}
+            \includegraphics[width = \linewidth]{plots/gpc-example-posterior.pdf}
+            \caption{Laplace approximation of posterior}
+            \label{subfig:gpc-example-posterior}
+        \end{subfigure}
+        \caption{
+            An example GP prior and posterior for the function \( f \left( x \right) = 2 \sin \left( 2x \right) + x \),
+            where the data were simulated as
+            \( x \sim U \left( -\pi, \pi \right), \Pr\left(y = 1\right) = \sigma\left(f\left(x\right)\right) \),
+            where \( \sigma \) is the logistic function.
+            Observations receiving positive labels are depicted in the rug on the top margin,
+            while observations receiving negative labels are depicted in the rug on the bottom margin;
+            the prior (posterior) mean with a solid line and the 95\% CI with a shaded region,
+            and the true \( f\left(x\right) \) with a dashed line.
+        }
+        \label{fig:gpc-example}
+    \end{figure}
+
+\end{frame}
+
+\begin{frame}
+    \frametitle{Inferential quantities of interest}
+    But, social scientists don't typically want posterior over \( \mathbf{f} \).
+    We want mean function parameter posteriors, or distribution of average marginal effect of \(d\)th predictor in \( \mathbf{X} \).
+\end{frame}
+
+\begin{frame}
+    \frametitle{Inferential QOIs: Mean function parameters}
+    For regression, with common case \( \mu \left( X \right) = X\beta \),
+    if we are uninterested in covariance function parameters,
+    posterior on \( \beta \) has a closed form solution, given in the paper.
+    
+    \vspace{\baselineskip}
+    If we also want uncertainty in covariance parameters, must sample;
+    in software, I provide \textit{much} faster sampling routine than Stan code from Carlson (2020).
+\end{frame}
+
+\begin{frame}
+    \frametitle{Inferential QOIs: Average marginal effects}
+
+In the regression context, the SAME is defined as
+
+\begin{equation}
+    \gamma_d \triangleq \dfrac{1}{N} \sum_{i = 1}^N \dfrac{\pd f \left( \mathbf{x}_i \right) }{\pd x_{id}}.
+\end{equation}
+
+Since the derivative of a GP is also a GP,
+we can also get the distribution of the derivative of \( f \).
+Then the SAME is the sum of correlated normal random variates, and its distribution is easy to derive (details in paper).
+\end{frame}
+
+\begin{frame}
+    \frametitle{SAME Example}
+
+\begin{figure}[htb]
+    \centering
+    \begin{subfigure}[b]{0.6\textwidth}
+        \includegraphics[width = \linewidth]{plots/example-ame-link.pdf}
+        \caption{AME of \(x\) on \(f\left(x\right)\)}
+    \end{subfigure}
+    \begin{subfigure}[b]{0.3\textwidth}
+        \includegraphics[width = \linewidth]{plots/example-ame-prob.pdf}
+        \caption{AME of \(x\) on \(\sigma\left(f\left(x\right)\right)\)}
+    \end{subfigure}
+    \caption{
+        Average marginal effect (AME) of \( x \) from the simulation above.
+        The left panel shows the AME of \( x \) on \( f\left(x\right) \) for both regression and classification;
+        the right panel shows the AME of \( x \) on the probability of a positive outcome in classification.
+        The true theoretical AME is given by the dashed line in both panels.
+    }
+    \label{fig:example-ames}
+\end{figure}
+\end{frame}
+
+\end{document}
+

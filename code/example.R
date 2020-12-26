@@ -39,7 +39,7 @@ ggplot(data = dat, mapping = aes(x = x, y = fbar)) +
     geom_ribbon(aes(ymin = flo, ymax = fhi), fill = "#8787875f") +
     geom_line() +
     geom_line(mapping = aes(x = x, y = f), linetype = "dashed") +
-    geom_point(aes(x = x, y = y), shape = "cross", alpha = 0.25) +
+    geom_point(aes(x = x, y = y), shape = "cross", alpha = 0.2) +
     ylab("f")
 ggsave("plots/gpr-example-prior.pdf", width = 3, height = 2)
 ## Plot posterior mean and 95% CI
@@ -51,7 +51,7 @@ ggplot(data = dat, mapping = aes(x = x, y = fbar)) +
     geom_ribbon(aes(ymin = flo, ymax = fhi), fill = "#8787875f") +
     geom_line() +
     geom_line(mapping = aes(x = x, y = f), linetype = "dashed") +
-    geom_point(aes(x = x, y = y), shape = "cross", alpha = 0.25) +
+    geom_point(aes(x = x, y = y), shape = "cross", alpha = 0.2) +
     ylab("f")
 ggsave("plots/gpr-example-posterior.pdf", width = 3, height = 2)
 

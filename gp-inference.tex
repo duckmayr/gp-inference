@@ -8,6 +8,10 @@
 \newcommand{\pd}{\ensuremath{\partial \,}}     %% improve spacing on partials
 \newcommand{\gradient}{\ensuremath{\mathbf{f}_d}} %% { (\pd f_i) / (\pd x_{id} }
 
+\newcommand{\Ky}{\ensuremath{K_y}} %% Don't have to hold shift key for _
+\newcommand{\Kyi}{\ensuremath{K_y^{-1}}} %% Saves typing
+\newcommand{\Bi}{\ensuremath{B^{-1}}} %% Same
+
 \title{Inference in Gaussian Process Models for Political Science}
 \author{JBrandon Duck-Mayr}
 \date{}
@@ -762,13 +766,480 @@ the linear models by contrast poorly estimate the average marginal effect of \( 
 \end{figure}
 
 
-\section{Conclusion}
-\label{sec:conclusion}
+% \section{Conclusion}
+% \label{sec:conclusion}
+% 
+% 
 
 
 \clearpage
 \bibliographystyle{apsr}
 \bibliography{refs.bib}
+
+
+\clearpage
+\appendix
+
+\section{Derivation of posterior over \( \boldsymbol\beta \) in GP regression}
+
+In Gaussian process regression, we have the following model specification:
+
+\begin{align}
+    y & \sim \mathcal{N}( f(X) + X\beta, \sigma_y^2 I ), \\
+    \beta & \sim \mathcal{N}( b, B ), \\
+    f & \sim \mathcal{GP}( 0, K(X) ).
+\end{align}
+
+Suppose we want the posterior distribution of $\beta$.
+We find
+
+\begin{align}
+    p(\beta \mid y, X)
+    & \propto p(y \mid \beta) p(\beta) \\
+    & = N(y; X\beta, \Ky) \times N(\beta; b, B),
+\end{align}
+
+where
+
+\begin{equation}
+    \Ky = K(X) + \sigma_y^2 I.
+\end{equation}
+
+We can show
+
+\begin{align}
+    \beta \mid y & \sim \mathcal{N}(\bar{\beta}, \Sigma_\beta), \\
+    \bar{\beta} & = ( \Bi + X^T \Kyi X )^{-1} ( \Bi b + X^T \Kyi y ), \\
+    \Sigma_\beta & = ( \Bi + X^T \Kyi X )^{-1}
+\end{align}
+
+with a bit of tedious algebra:
+
+\begin{align}
+    p(\beta \mid y, X)
+    & \propto  \exp\left( -\frac{1}{2} \left[ (y - X\beta)^T \Kyi (y - X\beta) + (\beta - b)^t B^{-1} (\beta - b) \right] \right) \\
+    & = \exp\biggl( -\frac{1}{2} \biggl[ y^T \Kyi y - \beta^T X^T \Kyi y - y^T \Kyi X \beta + \beta^T X^T \Kyi X \beta \\ \nonumber
+    & \phantom{\exp\biggl( -\frac{1}{2} \biggl[ y^T} + \beta^T \Bi \beta - b^T \Bi \beta - \beta^T \Bi b + b^T \Bi b \biggr] \biggr) \\
+    & = \exp\biggl( -\frac{1}{2} \biggl[ \beta^T \Bi \beta + \beta^T X^T \Kyi X \beta - \beta^T \Bi b - \beta^T X^T \Kyi y \\ \nonumber
+    & \phantom{\exp\biggl(-\frac{1}{2} yyyyy} - b^T \Bi \beta - y^T \Kyi X \beta \biggr] \\ \nonumber
+    & \phantom{\exp\biggl(-\frac{1}{2}} -\frac{1}{2} \biggl[ y^T \Kyi y + b^T \Bi b \biggr] \biggr) \\
+    & = \exp\biggl( -\frac{1}{2} \biggl[ \beta^T ( \Bi + X^T \Kyi X ) \beta - \beta^T ( \Bi b + X^T \Kyi y ) \\ \nonumber
+    & \phantom{= \exp\biggl( -\frac{1}{2} \biggl[} - ( b^T \Bi + y^T \Kyi X ) \beta \biggr] \\ \nonumber
+    & \phantom{\exp\biggl(-\frac{1}{2}} -\frac{1}{2} \biggl[ y^T \Kyi y + b^T \Bi b \biggr] \biggr) \\
+    & = \exp\biggl( -\frac{1}{2} \biggl[ \left( \beta - ( \Bi + X^T \Kyi X )^{-1} ( \Bi b + X^T \Kyi y ) \right)^T \\ \nonumber
+    & \phantom{= \exp \biggl( -\frac{1}{2} \biggl[} \times ( \Bi + X^T \Kyi X )\\ \nonumber
+    & \phantom{= \exp \biggl( -\frac{1}{2} \biggl[} \times \left( \beta - ( \Bi + X^T \Kyi X )^{-1} ( \Bi b + X^T \Kyi y ) \right) \biggr] \\ \nonumber
+    & \phantom{= \exp \biggl( } -\frac{1}{2} \biggl[ y^T \Kyi y + b^T \Bi b \biggr] \biggr) \\
+    & \propto \exp\biggl( -\frac{1}{2} \biggl[ \left( \beta - \bar{\beta} \right)^T \Sigma_\beta^{-1} ( \beta - \bar{\beta} ) \biggr] \biggr), \\ \nonumber
+\end{align}
+
+which is clearly the core of a normal distribution.
+
+\section{Distribution of derivatives of Gaussian processes}
+
+Luckily, ``[s]ince differentiation is a linear operator, the derivative of a Gaussian process is another Gaussian process''
+\citep[191]{RasmussenWilliams2006Gaussian}.
+
+Let
+
+\begin{equation}
+    \gradient = 
+    \begin{bmatrix}
+        \dfrac{\pd f_1}{\pd x_{1d}} \\
+        \vdots \\
+        \dfrac{\pd f_n}{\pd x_{nd}}
+    \end{bmatrix}.
+\end{equation}
+
+Using Equation 9.1 in \citet{RasmussenWilliams2006Gaussian},
+
+\begin{align}
+    K_d \triangleq
+    \C \left[ \gradient, \mbf{f} \right]
+    & = 
+    \begin{bmatrix}
+        \dfrac{\pd k \left(\mbf{x}_1, \mbf{x}_1 \right)}{\pd x_{1d}} & \ldots & \dfrac{\pd k \left(\mbf{x}_1, \mbf{x}_n \right)}{\pd x_{1d}} \\
+        \vdots                                                       & \ddots & \vdots \\
+        \dfrac{\pd k \left(\mbf{x}_n, \mbf{x}_1 \right)}{\pd x_{nd}} & \ldots & \dfrac{\pd k \left(\mbf{x}_n, \mbf{x}_n \right)}{\pd x_{nd}}
+    \end{bmatrix}, \\[1em]
+    K_{dd} \triangleq
+    \C \left[ \gradient, \gradient \right]
+    & = 
+    \begin{bmatrix}
+        \dfrac{\pd^2 k \left(\mbf{x}_1, \mbf{x}_1 \right)}{\pd x_{1d} \, \pd x_{1d}} & \ldots & \dfrac{\pd^2 k \left(\mbf{x}_1, \mbf{x}_n \right)}{\pd x_{1d} \, \pd x_{nd}} \\
+        \vdots                                                       & \ddots & \vdots \\
+        \dfrac{\pd^2 k \left(\mbf{x}_n, \mbf{x}_1 \right)}{\pd x_{nd} \, \pd x_{1d}} & \ldots & \dfrac{\pd^2 k \left(\mbf{x}_n, \mbf{x}_n \right)}{\pd x_{nd} \, \pd x_{nd}}
+    \end{bmatrix},
+\end{align}
+
+To make the notation more compact, as is usual we set \( K = K \left( \mbf{X}, \mbf{X} \right) \), 
+and additionally set \( \mu = \mu \)
+and
+
+\begin{equation}
+    \mu_d
+    =
+    \begin{bmatrix}
+        \dfrac{\pd \mu \left( \mbf{x}_1 \right)}{\pd x_{1d}} \\
+        \vdots \\
+        \dfrac{\pd \mu \left( \mbf{x}_n \right)}{\pd x_{nd}}
+    \end{bmatrix}.
+\end{equation}
+
+Then we can describe the joint prior on \( \mbf{f} \) and \( \gradient \):
+
+\begin{align}
+    \begin{bmatrix}
+        \mbf{f} \\
+        \gradient
+    \end{bmatrix}
+    \sim
+    \N
+    \left(
+        \begin{bmatrix}
+            \mu \\
+            \mu_d
+        \end{bmatrix},
+        \begin{bmatrix}
+            K   & K_d^T \\
+            K_d & K_{dd}
+        \end{bmatrix}
+    \right).
+\end{align}
+
+Then the posterior distribution of \( \gradient \) given \( \mbf{X} \) and \( \mbf{y} \) is normal with mean
+
+\begin{align}
+    \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & =
+    \int \E \left[ \gradient \mid \mbf{f}, \mbf{X} \right] p \left( \mbf{f} \mid \mbf{X}, \mbf{y} \right) d\mbf{f} \\
+    & = 
+    \int \mu_d + K_d \, K^{-1} \left( \mbf{f} - \mu \right) p \left( \mbf{f}  \mid \mbf{X}, \mbf{y} \right) d\mbf{f} \\
+    & =  \mu_d + K_d \, K^{-1} \left( \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] - \mu \right),
+\end{align}
+
+and variance (using the law of total variance)
+
+\begin{align}
+    \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    % & =
+    % \E \left[ \V \left[ \gradient \mid \mbf{f} \right] \right]
+    % + \V \left[ \E \left[ \gradient \mid \mbf{f} \right] \right] \\
+    & =
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + \E \left[ \left( \E \left[ \gradient \mid \mbf{f} \right] - \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right] \right)^2 \right] \\
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    \nonumber \\
+    & \phantom{=}
+    + \E
+    \Biggl[
+        \biggl(
+            \mu_d + K_d \, K^{-1}
+            \left( \mbf{f} - \mu \right)
+    \nonumber \\
+    & \phantom{= + \E}
+            -
+            \left(
+                \mu_d + K_d \, K^{-1}
+                \left( \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] - \mu \right)
+            \right)
+        \biggr)^2
+    \Biggr] \\
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    \nonumber \\
+    & \phantom{=}
+    + \E
+    \Biggl[
+        \biggl(
+            K_d \, K^{-1}
+            \left( \mbf{f} - \mu \right)
+            -
+            K_d \, K^{-1}
+            \left( \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] - \mu \right)
+        \biggr)^2
+    \Biggr] \\[1em]
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    \nonumber \\
+    & \phantom{=}
+    + \E
+    \Biggl[
+        \biggl(
+            K_d \, K^{-1} \mbf{f}
+            - K_d \, K^{-1} \mu
+    \nonumber \\
+    & \phantom{= + \E}
+            -
+            K_d \, K^{-1} \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right]
+            + K_d \, K^{-1} \mu
+        \biggr)^2
+    \Biggr] \\
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + \E
+    \Biggl[
+        \biggl(
+            K_d \, K^{-1} \mbf{f}
+            -
+            K_d \, K^{-1} \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right]
+        \biggr)^2
+    \Biggr] \\[1em]
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + \E
+    \Biggl[
+        K_d \, K^{-1} 
+        \biggl(
+            \mbf{f} - \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right]
+        \biggr)^2
+        K^{-1} K_d^T
+    \Biggr] \\
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + 
+    K_d \, K^{-1}
+    \E \Biggl[
+        \biggl(
+            \mbf{f} - \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right]
+        \biggr)^2
+    \Biggr]
+    K^{-1} K_d^T \\
+    & = 
+    K_{dd} - K_d \, K^{-1} \, K_d^T
+    + 
+    K_d \, K^{-1}
+    \V \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right]
+    K^{-1} K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \V \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] K^{-1} \right) K_d^T.
+\end{align}
+
+\subsection{The regression case}
+
+In the regression case,
+
+\begin{align}
+    \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = \mu_d + K_d \, K^{-1} \left( \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] - \mu \right) \\
+    & = \mu_d + K_d \, K^{-1}
+        \left( \mu + K \, K_y^{-1} \left( \mbf{y} - \mu \right) - \mu \right) \\
+    & = \mu_d + K_d K^{-1} \left( K \, K_y^{-1} \left( \mbf{y} - \mu \right) \right) \\
+    & = \mu_d + K_d \, K_y^{-1} \left( \mbf{y} - \mu \right),
+\end{align}
+
+\noindent
+where, as usual, \( K_y = K + \sigma_y^2 I \).
+Then
+
+\begin{align}
+    \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \V \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] K^{-1} \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \left( K - K K_y^{-1} K \right) K^{-1} \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - \left( I - K_y^{-1} K \right) K^{-1} \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - \left( K^{-1} - K_y^{-1} \right) \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \, K_y^{-1} \, K_d^T.
+\end{align}
+
+Note the similarity to the predictive distribution of \( \mbf{f}_\ast \) for new cases \( \mbf{X}_\ast \).
+
+\subsection{The classification case}
+
+In the classification case, under the Laplace approximation to the posterior,
+
+\begin{align}
+    \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = \mu_d + K_d \, K^{-1} \left( \E \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] - \mu \right) \\
+    & = \mu_d + K_d \, K^{-1}
+        \left( \mu + K \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right) - \mu \right) \\
+    & = \mu_d + K_d K^{-1} \left( K \, \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right) \right) \\
+    & = \mu_d + K_d \, \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right), \\
+    \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \V \left[ \mbf{f} \mid \mbf{X}, \mbf{y} \right] K^{-1} \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K^{-1} - K^{-1} \left( K^{-1} + W \right)^{-1} K^{-1} \right) K_d^T \\
+    & = 
+    K_{dd} - K_d \left( K + W^{-1} \right)^{-1} K_d^T, \hspace*{1em}\text{\footnotesize(by the matrix inversion lemma)} \\
+    W & = -\nabla\nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right).
+\end{align}
+
+\section{Distribution of average marginal effects}
+
+Since then \( \gamma_d \) is a constant ( \( 1/N \) ) times the sum of correlated normal random variables,
+
+\begin{align}
+    \gamma_d
+    & \sim
+    \N \left(
+        \dfrac{1}{N} \sum_{i=1}^N m_{\gamma_d i} \, , \,
+        \dfrac{1}{N^2} \sum_{j=1}^N \sum_{i=1}^N c_{\gamma_d ij}
+    \right), \label{eq:avg-partial-distribution1} \\
+    \mbf{m}_{\gamma_d} & = \E \left[ \gradient \mid \mbf{X}, \mbf{y} \right] \\
+    \mbf{C}_{\gamma_d} & = \V \left[ \gradient \mid \mbf{X}, \mbf{y} \right]
+\end{align}
+
+\noindent
+Importantly, we may also get the average marginal effect of feature \( d \) within subgroups of \( \mbf{X} \)
+rather than the full sample average by simply altering the indices of summation in
+Equation~\ref{eq:avg-partial-distribution1}.
+
+However, for binary classification, we may be more interested in the distribution of
+
+\begin{equation}
+    \pi_d \triangleq \dfrac{1}{N} \sum_i^N \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd x_{id}}
+\end{equation}
+
+\noindent
+than \( \gamma_d \).
+Unfortunately, that distribution cannot be analytically expressed, though we can readily simulate from it.
+First note that
+
+\begin{equation}
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd x_{id}}
+    =
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd f}
+    \dfrac{\pd f \left( \mbf{x}_i \right)}{\pd x_{id}}.
+\end{equation}
+
+Generally the sigmoid function \( \sigma \) has a known derivative;
+for example, in the logistic case,
+
+\begin{equation}
+    \dfrac{\pd \sigma \left( f \left( \mbf{x}_i \right) \right)}{\pd f}
+    =
+    \sigma \left( f \left( \mbf{x}_i \right) \right) \left( 1 - \sigma \left( f \left( \mbf{x}_i \right) \right) \right).
+\end{equation}
+
+\noindent
+Since we have an approximation to the posterior on \( f \), and given \( f \), the posterior over \( \mbf{f}_d \) is
+
+\begin{align}
+    \mbf{f}_d \mid \mbf{f}
+    & \sim
+    \N \left( \mu_d + K_d \, K^{-1} \left( \mbf{f} - \mu \right), K_{dd} - K_{d} \, K^{-1} \, K_d^T \right),
+\end{align}
+
+we can obtain \( M \) samples of \( \pi_d \) by
+
+\begin{itemize}
+    \item drawing \( \mbf{f}^t \) from
+        \(
+            \N \left(
+                \mu + K \left( \nabla \log p \left( \mbf{y} \mid \hat{\mbf{f}} \right) \right), \left( K^{-1} + W \right)^{-1}
+            \right)
+        \),
+    \item drawing \( \mbf{f}^t_d \) from
+        \(
+            \N \left(
+                \mu_d + K_d \, K^{-1} \left( \mbf{f}^t - \mu \right), K_{dd} - K_{d} \, K^{-1} \, K_d^T
+            \right)
+        \),
+    \item and calculating \( \pi_d^t = \dfrac{1}{N} \displaystyle\sum_{i=1}^N \dfrac{\pd \sigma \left( f_i^t \right)}{\pd f} f_{id}^t \),
+\end{itemize}
+
+so that we can summarize the distribution of \( \pi_d \) using the \( M \) draws,
+similar to the CLARIFY procedure \citep{KingEtAl2000Making}.
+
+Moreover, another issue to consider is discrete variables in \( \mbf{X} \).
+For binary variables, let \( \mbf{X}_1^\ast \) be a set of test points where all feature observactions are identical to \( \mbf{X} \)
+except that all observations of feature \( d \) have been set to 1, and analogously for \( \mbf{X}_0^\ast \).%
+\footnote{
+    You can replace 1 and 0 with other binary value labels as needed.
+}
+Then a more appropriate quantity of interest rather than \( \gamma_d \) is
+
+\begin{equation}
+    \delta_d = \dfrac{1}{N} \sum_{i=1}^N f \left( \mbf{x}_{1i}^\ast \right) - f \left( \mbf{x}_{0i}^\ast \right),
+\end{equation}
+
+\noindent
+which gives the average marginal effect on \( y \) of taking a 1 vs a 0 value in the regression case,
+or the average partial effect on \( f \) of taking a 1 vs a 0 value in the classification case.
+Letting \( \mbf{f}_1 = f \left( \mbf{X}_1^\ast \right) \) and analogously for \( \mbf{f}_0 \), \( \delta_d \) is distributed
+
+\begin{align}
+    \delta_d
+    & \sim
+    \N \left(
+        \dfrac{1}{N} \sum_{i=1}^N m_{\delta_d i} \, , \,
+        \dfrac{1}{N^2} \sum_{j=1}^N \sum_{i=1}^N c_{\delta_d ij}
+    \right), \label{eq:avg-difference-distribution1} \\
+    \mbf{m}_{\delta_d} & = \E \left[ \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right] - \E \left[ \mbf{f}_0^\ast \mid \mbf{X}, \mbf{y} \right], \\
+    \mbf{C}_{\delta_d}
+    & =
+    \V \left[ \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right]
+    + \V \left[ \mbf{f}_0^\ast \mid \mbf{X}, \mbf{y} \right]
+    + \C \left[ \mbf{f}_1^\ast, \mbf{f}_0^\ast  \mid \mbf{X}, \mbf{y} \right]
+    + \C \left[ \mbf{f}_0^\ast, \mbf{f}_1^\ast \mid \mbf{X}, \mbf{y} \right].
+\end{align}
+
+For classification we can also simulate the distribution of
+
+\begin{equation}
+    \psi_d = \dfrac{1}{N} \sum_{i=1}^N \sigma \left( f \left( \mbf{x}_{1i}^\ast \right) \right) - \sigma \left( f \left( \mbf{x}_{0i}^\ast \right) \right)
+\end{equation}
+
+\noindent
+by simply generating values of \( f \left( \mbf{X}_1^\ast \right) \) and \( f \left( \mbf{X}_0^\ast \right) \)
+from the posterior approximation, pushing those samples through the chosen sigmoid \( \sigma \),
+and calculate the average of the differences to get the average marginal effect for each sample
+so that we can summarize the distribution of average marginal effects, similar to the continuous case.
+In the case of a categorical variable that has been one-hot encoded into \( \mbf{X} \),
+we can simply follow the above procedures for all the substantively interesting pairwise comparisons between category labels.
+Moreover, in some cases using this procedure to find the distribution of difference in MAP predictions at two discrete values
+of a continuous variable may be more readily interpretable than \( \pi_d \).
+
+
+\section{Derivatives of mean and covariance functions}
+
+Regarding the derivatives of the mean function,
+
+\begin{align}
+    \mu \left( X \right) = 0 \Rightarrow \,
+    &
+    \dfrac{\pd \mu \left( \mbf{x}_i \right) }{\pd \mbf{x}_{id}} = 0, \\[1em]
+    \mu \left( X \right) = X\beta \Rightarrow \,
+    &
+    \dfrac{\pd \mu \left( \mbf{x}_i \right) }{\pd \mbf{x}_{id}} = \beta_d,
+\end{align}
+
+\noindent
+to cover a couple of popular choices.
+
+Note that calculating the mean and variance of the distribution of \( \gamma_d \) requires a twice-differentiable covariance function.
+For the squared exponential covariance function with automatic relevance determination,
+
+\begin{align}
+    k \left(\mbf{x}_i, \mbf{x}_j \right)
+    & =
+    \sigma_f^2 \exp \left( -\frac{1}{2} \sum_d \left[ \frac{\left(x_{id} - x_{jd}\right)^2}{\ell_d^2} \right] \right).
+\end{align}
+
+\noindent
+Then, 
+
+\begin{align}
+    \dfrac{\pd k \left(\mbf{x}_i, \mbf{x}_j \right)}{\pd \mbf{x}_{id}}
+    & = 
+    k \left(\mbf{x}_i, \mbf{x}_j \right) \dfrac{x_{jd} - x_{id}}{\ell_d^2} \\
+    \dfrac{\pd^2 k \left(\mbf{x}_{i}, \mbf{x}_{j} \right)}{\pd  \mbf{x}_{id} \pd \mbf{x}_{jd}}
+    & =
+    k \left(\mbf{x}_{i}, \mbf{x}_{j} \right)
+    \left(
+        \dfrac{1}{\ell_d^2} +
+        \dfrac{\left( x_{jd} - x_{id} \right) \left( x_{id} - x_{jd} \right)}{\ell_d^4}
+    \right),
+\end{align}
+
+Note that when \( i = j \), the cross partial simplifies to \( \sigma_f^2 / \ell_d^2 \).
+
 
 \end{document}
 
