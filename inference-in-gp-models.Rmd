@@ -1,13 +1,16 @@
 ---
 title: "Inference in Gaussian Process Models for Political Science"
 author: "JBrandon Duck-Mayr"
-date: "`r gsub(' 0', ' ', x = format(Sys.Date(), '%B %d, %Y'))`"
+date: "`r quack::american_date_format(Sys.Date())`"
 abstract: "Abstract (typically should be 150 words or less)"
 anonymized: true
 wordcount: "XXXX"
 bibliography: "gp-inference-refs.bib"
 nocite: "@*"
 output: quack::submission
+editor_options:
+  markdown:
+    wrap: sentence
 ---
 
 ```{r setup, include = FALSE}
@@ -16,11 +19,26 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # Introduction
 
-# Literature Review and Theory
+Political scientists are increasingly mindful of the danger of misspecification bias [@HainmuellerHazlett2014], particularly regarding interactive effects [@BeiserMcGrathBeiserMcGrath2022; @BlackwellOlson2022; @HainmuellerEtAl2019; @ZhirnovEtAl2022].
+A number of approaches to this problem have been proposed, including diagnostic tests [@HainmuellerEtAl2019] and modeling strategies [@BlackwellOlson2022; @HainmuellerHazlett2014].
+Some political scientists have begun using Gaussian process (GP) regression, a model from the machine learning literature, in situations where misspecification bias or correlated errors are a concern [@CarlsonND; @ChenEtAl2022; @DuckMayrEtAl2020; @Gill2021; @MonoganGill2016].
+However, as GP models were developed by computer scientists, most existing treatments of GP regression and classification [e.g. @RasmussenWilliams2006] focus on prediction rather than inference.
+I derive the distribution of average marginal effects for GP regression and classification, and present a guide for political scientists on performing inference using these models.[^1]
+(I have developed an R package, `gpmss`, that implements these techniques and provides a user-friendly interface similar to the familiar basic functions for general linear models in R.)
+I then compare GP regression and classification against other methods of guarding against misspecification bias in a simulation study.[^2]
+Finally, I illustrate the use of GP regression and classification models in two real-world applications.
 
-# Data and Methods
+[^1]: See @HainmuellerHazlett2014 for a similar treatment of the Kernel Regulated Least Squares model.
 
-# Results
+[^2]: All analysis in this paper was conducted in R [@R] using RStudio [@RStudio].
+
+# An Introduction to Gaussian Process Models
+
+# Inference for Quantities of Interest
+
+# Comparison to Other Methods
+
+# Applications
 
 # Conclusion
 
