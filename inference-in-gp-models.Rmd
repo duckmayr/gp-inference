@@ -32,7 +32,18 @@ Finally, I illustrate the use of GP regression and classification models in two 
 
 [^2]: All analysis in this paper was conducted in R [@R] using RStudio [@RStudio].
 
+<!-- Add a more detailed section on the problem(s) of misspecification bias
+     (and correlated errors)? -->
+
 # An Introduction to Gaussian Process Models
+
+As social scientists, we are typically interested in the relationship $f$ between a set of explanatory variables $X$ and outcomes $y$ that are realized with some noise $\varepsilon$; that is, $y = f(X) + \varepsilon$ and we want to learn about $f$.
+The standard approach in political science is to assume a functional form for $f$ and perform inference on its parameters.
+However, in many contexts faced by political scientists, we should admit more uncertainty about the function form of $f$; many assumptions we often make such as linearity or which interactive or second (or third...) order terms to include may be unfounded [@HainmuellerHazlett2014; @HainmuellerEtAl2019].
+
+GP regression and classification takes a different approach: We place a prior distribution over $f$ and derive the posterior distribution after obtaining observations of the predictors, $\mathbf{X}$, and observations of the outcomes, $\mathbf{y}$.
+Placing a prior distribution over a function is likely a novel concept for most political scientists, but it will become clear after a brief discussion of what a Gaussian process is.
+A Gaussian process is an infinite dimensional generalization of the normal distribution, where any finite subcollection 
 
 # Inference for Quantities of Interest
 
