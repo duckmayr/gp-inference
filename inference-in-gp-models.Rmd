@@ -19,9 +19,9 @@ knitr::opts_chunk$set(echo = FALSE)
 
 # Introduction
 
-Political scientists are increasingly mindful of the danger of misspecification bias [@HainmuellerHazlett2014], particularly regarding interactive effects [@BeiserMcGrathBeiserMcGrath2022; @BlackwellOlson2022; @HainmuellerEtAl2019; @ZhirnovEtAl2022].
+Political scientists are increasingly mindful of the danger of misspecification bias [@HainmuellerHazlett2014], particularly regarding interactive effects [@BeiserMcGrathBeiserMcGrath2023; @BlackwellOlson2022; @HainmuellerEtAl2019; @ZhirnovEtAl2023].
 A number of approaches to this problem have been proposed, including diagnostic tests [@HainmuellerEtAl2019] and modeling strategies [@BlackwellOlson2022; @HainmuellerHazlett2014].
-Some political scientists have begun using Gaussian process (GP) regression, a model from the machine learning literature, in situations where misspecification bias or correlated errors are a concern [@CarlsonND; @ChenEtAl2022; @DuckMayrEtAl2020; @Gill2021; @MonoganGill2016].
+Some political scientists have begun using Gaussian process (GP) regression, a model from the machine learning literature, in situations where misspecification bias or correlated errors are a concern [@CarlsonND; @ChenEtAl2023; @DuckMayrEtAl2020; @Gill2021; @MonoganGill2016].
 However, as GP models were developed by computer scientists, most existing treatments of GP regression and classification [e.g. @RasmussenWilliams2006] focus on prediction rather than inference.
 I derive the distribution of average marginal effects for GP regression and classification, and present a guide for political scientists on performing inference using these models.[^1]
 (I have developed an R package, `gpmss`, that implements these techniques and provides a user-friendly interface similar to the familiar basic functions for general linear models in R.)
